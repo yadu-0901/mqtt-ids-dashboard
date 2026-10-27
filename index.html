@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MQTT IDS Monitor – Testbed Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#eef2f5;--panel:#ffffff;--ink:#14202b;--mute:#5b6b7a;--line:#d5dde4;
+  --ok:#17806d;--warn:#b7791f;--bad:#c0392b;--zero:#6c3fc4;--accent:#1f5f8b;
+  --okbg:#e0f3ee;--warnbg:#fbefd5;--badbg:#fbe3df;--zerobg:#ece3fa;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;--bg:#0f161d;--panel:#18222c;--ink:#e6edf3;--mute:#92a2b1;--line:#2b3a47;
+  --ok:#4cc9ad;--warn:#e6b450;--bad:#ff7b6b;--zero:#b99cff;--accent:#6bb3e0;
+  --okbg:#14332d;--warnbg:#38301a;--badbg:#3c1f1b;--zerobg:#2a2147;}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#0f161d;--panel:#18222c;--ink:#e6edf3;--mute:#92a2b1;--line:#2b3a47;
+  --ok:#4cc9ad;--warn:#e6b450;--bad:#ff7b6b;--zero:#b99cff;--accent:#6bb3e0;
+  --okbg:#14332d;--warnbg:#38301a;--badbg:#3c1f1b;--zerobg:#2a2147;}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 "IBM Plex Sans",system-ui,Segoe UI,Arial,sans-serif}
+.mono{font-family:"IBM Plex Mono",Consolas,monospace}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:14px 22px;background:var(--panel);border-bottom:1px solid var(--line)}
+h1{font-size:18px;margin:0;font-weight:600}
+h1 small{display:block;font-weight:400;color:var(--mute);font-size:12px}
+.hstat{display:flex;gap:18px;flex-wrap:wrap;align-items:center}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:500}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+.p-ok{background:var(--okbg);color:var(--ok)}.p-warn{background:var(--warnbg);color:var(--warn)}
+.p-bad{background:var(--badbg);color:var(--bad)}.p-zero{background:var(--zerobg);color:var(--zero)}
