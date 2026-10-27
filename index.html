@@ -31,3 +31,175 @@ h1 small{display:block;font-weight:400;color:var(--mute);font-size:12px}
 .dot{width:8px;height:8px;border-radius:50%;background:currentColor}
 .p-ok{background:var(--okbg);color:var(--ok)}.p-warn{background:var(--warnbg);color:var(--warn)}
 .p-bad{background:var(--badbg);color:var(--bad)}.p-zero{background:var(--zerobg);color:var(--zero)}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:6px 12px;border-radius:6px}
+button:hover{border-color:var(--accent)}button:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+main{display:grid;grid-template-columns:repeat(12,1fr);gap:14px;padding:16px 22px;max-width:1400px;margin:auto}
+section{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px;min-width:0}
+h2{font-size:13px;margin:0 0 10px;font-weight:600}
+.kpis{grid-column:span 12;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;background:none;border:0;padding:0}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;border-left-width:4px}
+.kpi b{display:block;font-size:26px;font-weight:600;line-height:1.1}.kpi span{color:var(--mute);font-size:12px}
+.rooms{grid-column:span 5}.chart{grid-column:span 7}.flows{grid-column:span 8}.side{grid-column:span 4;display:flex;flex-direction:column;gap:14px;background:none;border:0;padding:0}
+.side section{flex:1}
+.room{margin-bottom:12px}.room:last-child{margin-bottom:0}
+.room h3{font-size:12px;margin:0 0 6px;color:var(--mute);font-weight:500}
+.sens{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.s{border:1px solid var(--line);border-radius:6px;padding:8px}
+.s .n{font-size:11px;color:var(--mute)}.s .v{font-size:18px;font-weight:500}
+.s .t{font-size:10px;margin-top:2px}
+.s.hit{border-color:var(--bad);background:var(--badbg)}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:12px}
+th{text-align:left;color:var(--mute);font-weight:500;padding:6px 8px;border-bottom:1px solid var(--line)}
+td{padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+tr.new td{animation:flash 1.2s}@keyframes flash{from{background:var(--zerobg)}to{background:transparent}}
+@media (prefers-reduced-motion:reduce){tr.new td{animation:none}}
+label{display:block;font-size:12px;color:var(--mute);margin:8px 0 3px}
+select{width:100%;font:inherit;padding:6px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+.log{font-size:11px;max-height:130px;overflow:auto;color:var(--mute)}
+.log div{padding:2px 0;border-bottom:1px dashed var(--line)}
+.bar{height:10px;border-radius:5px;background:var(--line);overflow:hidden;margin:4px 0 8px}
+.bar i{display:block;height:100%;background:var(--accent)}
+svg text{fill:var(--mute);font-size:10px;font-family:inherit}
+footer{text-align:center;color:var(--mute);font-size:11px;padding:6px 0 18px}
+@media (max-width:980px){.rooms,.chart,.flows,.side{grid-column:span 12}}
+</style>
+</head>
+<body>
+<header>
+  <h1>MQTT IDS Monitor<small>Raspberry Pi testbed · Mosquitto broker · TabNet classifier</small></h1>
+  <div class="hstat">
+    <span class="pill p-ok"><span class="dot"></span>Broker online</span>
+    <span class="pill p-ok"><span class="dot"></span>Capture running (tshark)</span>
+    <span class="pill p-warn"><span class="dot"></span>Attack node idle</span>
+    <button id="theme" type="button">Switch theme</button>
+  </div>
+</header>
+
+<main>
+  <section class="kpis" aria-label="Summary">
+    <div class="kpi" style="border-left-color:var(--accent)"><b id="k-total" class="mono">0</b><span>Flows captured</span></div>
+    <div class="kpi" style="border-left-color:var(--ok)"><b id="k-norm" class="mono">0</b><span>Classified normal</span></div>
+    <div class="kpi" style="border-left-color:var(--bad)"><b id="k-att" class="mono">0</b><span>Classified attack</span></div>
+    <div class="kpi" style="border-left-color:var(--zero)"><b id="k-zero" class="mono">0</b><span>Zero-day flagged</span></div>
+    <div class="kpi" style="border-left-color:var(--warn)"><b id="k-conf" class="mono">–</b><span>Avg. model confidence</span></div>
+  </section>
+
+  <section class="rooms">
+    <h2>Sensor network (2 rooms, 6 sensors)</h2>
+    <div class="room"><h3>Room 1</h3><div class="sens" id="r1"></div></div>
+    <div class="room"><h3>Room 2</h3><div class="sens" id="r2"></div></div>
+  </section>
+
+  <section class="chart">
+    <h2>Flow rate: normal vs attack (last 30 s)</h2>
+    <svg id="svg" viewBox="0 0 600 190" width="100%" role="img" aria-label="Line chart of flows per second"></svg>
+    <div style="display:flex;gap:16px;font-size:12px;color:var(--mute)">
+      <span><span style="color:var(--ok)">▬</span> Normal</span><span><span style="color:var(--bad)">▬</span> Attack</span>
+    </div>
+  </section>
+
+  <section class="flows">
+    <h2>Live flow classification</h2>
+    <div class="tw"><table>
+      <thead><tr><th>Time</th><th>Source</th><th>Topic</th><th>Pkts</th><th>Duration</th><th>Class</th><th>Confidence</th></tr></thead>
+      <tbody id="tb"></tbody>
+    </table></div>
+  </section>
+
+  <div class="side">
+    <section>
+      <h2>Attack injection (isolated node)</h2>
+      <label for="atk">Attack type</label>
+      <select id="atk">
+        <option>Publish flood</option><option>Slow DoS</option><option>Malformed packets</option>
+        <option>Brute-force login</option><option>Novel attack (engineered)</option>
+      </select>
+      <label for="rate">Intensity</label>
+      <select id="rate"><option>Low</option><option selected>Medium</option><option>High</option></select>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="primary" id="go" type="button">Start attack</button>
+        <button id="stop" type="button">Stop</button>
+      </div>
+      <p style="font-size:11px;color:var(--mute);margin:8px 0 0">Parameters are logged for automatic flow labelling.</p>
+    </section>
+    <section>
+      <h2>Alerts and label log</h2>
+      <div class="log mono" id="log"><div>Waiting for traffic…</div></div>
+    </section>
+    <section>
+      <h2>Dataset build</h2>
+      <div style="font-size:12px;color:var(--mute)">BCCC flows + live flows</div><div class="bar"><i style="width:38%"></i></div>
+      <div style="font-size:12px;color:var(--mute)">Class balance (SMOTE)</div><div class="bar"><i style="width:72%"></i></div>
+    </section>
+  </div>
+</main>
+<footer>Mockup for presentation. Values are simulated.</footer>
+
+<script>
+(function(){
+  var rooms={r1:["Temperature","Humidity","Motion"],r2:["Light","CO₂","Door"]};
+  var units={Temperature:"°C",Humidity:"%",Motion:"",Light:"lx","CO₂":"ppm",Door:""};
+  var topics=["room1/temp","room1/humidity","room1/motion","room2/light","room2/co2","room2/door"];
+  var srcs=["192.168.10.11","192.168.10.12","192.168.10.13","192.168.10.21","192.168.10.22","192.168.10.23"];
+  var attackIP="192.168.10.99",attacking=false,atkName="";
+  var tot=0,norm=0,att=0,zero=0,confSum=0,hist=[];
+  for(var i=0;i<30;i++)hist.push([4+Math.random()*3,0]);
+  function el(id){return document.getElementById(id)}
+  function rnd(a,b){return a+Math.random()*(b-a)}
+  function sensorBoxes(){
+    ["r1","r2"].forEach(function(r,ri){
+      el(r).innerHTML=rooms[r].map(function(n,i){
+        var idx=ri*3+i,v;
+        if(n==="Temperature")v=rnd(24,27).toFixed(1);else if(n==="Humidity")v=rnd(45,60).toFixed(0);
+        else if(n==="Motion")v=Math.random()>.7?"Yes":"No";else if(n==="Light")v=rnd(280,420).toFixed(0);
+        else if(n==="CO₂")v=rnd(480,700).toFixed(0);else v=Math.random()>.85?"Open":"Closed";
+        var hit=attacking&&idx===(atkTarget||0);
+        return '<div class="s'+(hit?' hit':'')+'"><div class="n">'+n+'</div><div class="v mono">'+v+'<small> '+units[n]+'</small></div><div class="t" style="color:'+(hit?'var(--bad)':'var(--ok)')+'">'+(hit?'Under attack':'Healthy')+'</div></div>';
+      }).join("");
+    });
+  }
+  var atkTarget=0;
+  function addRow(){
+    var isAtk=attacking&&Math.random()<.55,isZero=isAtk&&atkName.indexOf("Novel")===0&&Math.random()<.7;
+    var idx=Math.floor(Math.random()*6),cls,pill,conf;
+    if(isZero){cls="Zero-day suspect";pill="p-zero";conf=rnd(.38,.55)}
+    else if(isAtk){cls=atkName;pill="p-bad";conf=rnd(.88,.99)}
+    else{cls="Normal";pill="p-ok";conf=rnd(.93,.995)}
+    tot++;confSum+=conf;if(isZero)zero++;else if(isAtk)att++;else norm++;
+    var t=new Date().toLocaleTimeString("en-GB");
+    var tr=document.createElement("tr");tr.className=isZero?"new":"";
+    tr.innerHTML='<td class="mono">'+t+'</td><td class="mono">'+(isAtk?attackIP:srcs[idx])+'</td><td class="mono">'+(isAtk?"#/ (wildcard)":topics[idx])+'</td><td class="mono">'+(isAtk?Math.floor(rnd(300,2400)):Math.floor(rnd(4,16)))+'</td><td class="mono">'+(isAtk?rnd(.1,2).toFixed(2):rnd(.2,3).toFixed(2))+' s</td><td><span class="pill '+pill+'">'+cls+'</span></td><td class="mono">'+(conf*100).toFixed(1)+'%</td>';
+    var tb=el("tb");tb.insertBefore(tr,tb.firstChild);while(tb.children.length>9)tb.removeChild(tb.lastChild);
+    if(isAtk){var l=el("log"),d=document.createElement("div");
+      d.textContent=t+(isZero?" ZERO-DAY flag, conf "+(conf*100).toFixed(0)+"%, queued for review":" label="+atkName+" from "+attackIP);
+      if(l.firstChild&&l.firstChild.textContent.indexOf("Waiting")===0)l.innerHTML="";
+      l.insertBefore(d,l.firstChild);while(l.children.length>30)l.removeChild(l.lastChild);}
+    el("k-total").textContent=tot;el("k-norm").textContent=norm;el("k-att").textContent=att;el("k-zero").textContent=zero;
+    el("k-conf").textContent=(confSum/tot*100).toFixed(1)+"%";
+  }
+  function draw(){
+    var W=600,H=190,p=26,max=Math.max.apply(null,hist.map(function(h){return Math.max(h[0],h[1])}).concat([10]));
+    function line(k,c){return '<polyline fill="none" stroke="'+c+'" stroke-width="2" points="'+hist.map(function(h,i){return (p+i*(W-p-8)/29).toFixed(1)+','+(H-p-(h[k]/max)*(H-p-10)).toFixed(1)}).join(" ")+'"/>'}
+    var g="";for(var i=0;i<=4;i++){var y=H-p-i*(H-p-10)/4;g+='<line x1="'+p+'" x2="'+(W-8)+'" y1="'+y+'" y2="'+y+'" stroke="var(--line)"/><text x="2" y="'+(y+3)+'">'+Math.round(max*i/4)+'</text>'}
+    el("svg").innerHTML=g+line(0,"var(--ok)")+line(1,"var(--bad)")+'<text x="'+p+'" y="'+(H-8)+'">-30 s</text><text x="'+(W-34)+'" y="'+(H-8)+'">now</text>';
+  }
+  function tick(){
+    hist.shift();hist.push([rnd(4,7),attacking?rnd(14,26)*({Low:.5,Medium:1,High:1.4}[el("rate").value]):0]);
+    var n=attacking?3:1;for(var i=0;i<n;i++)addRow();
+    sensorBoxes();draw();
+  }
+  el("go").onclick=function(){attacking=true;atkName=el("atk").value;atkTarget=Math.floor(Math.random()*6);
+    var s=document.querySelector(".hstat .pill.p-warn,.hstat .pill.p-bad");s.className="pill p-bad";s.innerHTML='<span class="dot"></span>Attack node active';};
+  el("stop").onclick=function(){attacking=false;
+    var s=document.querySelector(".hstat .pill.p-warn,.hstat .pill.p-bad");s.className="pill p-warn";s.innerHTML='<span class="dot"></span>Attack node idle';};
+  el("theme").onclick=function(){var r=document.documentElement;
+    var dark=r.getAttribute("data-theme")==="dark"||(!r.getAttribute("data-theme")&&matchMedia("(prefers-color-scheme: dark)").matches);
+    r.setAttribute("data-theme",dark?"light":"dark");};
+  for(var i=0;i<6;i++)addRow();
+  tick();setInterval(tick,1000);
+})();
+</script>
+</body>
+</html>
